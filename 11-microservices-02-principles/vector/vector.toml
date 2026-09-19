@@ -1,0 +1,44 @@
+# ============================================================
+# SOURCE: читаем stdout всех Docker-контейнеров
+# ============================================================
+[sources.docker_logs]
+type = "docker_logs"
+docker_host = "unix:///var/run/docker.sock"
+
+# ============================================================
+# TRANSFORM: обогащаем логи
+# ============================================================
+[transforms.parse_logs]
+type = "remap"
+inputs = ["docker_logs"]
+source = '''
+# Пытаемся распарсить JSON (если сервис пишет JSON)
+.parsed, err = parse_json(.message)
+if err == null {
+  . = merge(., .parsed)
+  del(.parsed)
+}
+
+# Добавляем поле с именем сервиса
+.service = .container_name
+
+# Убираем служебные поля
+del(.source_type)
+del(.host)
+'''
+
+# ============================================================
+# SINK: отправляем в Elasticsearch
+# ============================================================
+[sinks.elasticsearch]
+type = "elasticsearch"
+inputs = ["parse_logs"]
+endpoints = ["http://elasticsearch:9200"]
+mode = "bulk"
+bulk.index = "docker-logs-%Y.%m.%d"
+auth.strategy = "basic"
+auth.user = "elastic"
+auth.password = "qwerty123456"
+compression = "gzip"
+batch.max_events = 500
+batch.timeout_secs = 5
