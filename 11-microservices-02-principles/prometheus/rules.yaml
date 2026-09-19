@@ -1,0 +1,34 @@
+groups:
+  - name: node_alerts
+    rules:
+      - alert: HighCPU
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 80
+        for: 20s
+        labels:
+          severity: warning
+        annotations:
+          description: "CPU usage is above 80% for 5 minutes"
+
+      - alert: LowMemory
+        expr: node_memory_MemFree_bytes / 1024 / 1024 / 1024 < 1
+        for: 20s
+        labels:
+          severity: critical
+        annotations:
+          description: "Free memory is less than 1GB"
+
+      - alert: HighLoad
+        expr: node_load1 > 2
+        for: 20s
+        labels:
+          severity: warning
+        annotations:
+          description: "Load average is above 2 for 5 minutes"
+
+      - alert: LowDiskSpace
+        expr: node_filesystem_free_bytes{mountpoint="/"} / 1024 / 1024 / 1024 < 5
+        for: 20s
+        labels:
+          severity: critical
+        annotations:
+          description: "Free disk space is less than 5GB"
